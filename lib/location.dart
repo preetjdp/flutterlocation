@@ -64,8 +64,11 @@ class Location {
   static const MethodChannel _channel = const MethodChannel('lyokone/location');
   static const EventChannel _stream =
       const EventChannel('lyokone/locationstream');
+  static const EventChannel _gpsButtonStream = 
+      const EventChannel('lyokone/gpsbuttonstream');
 
   Stream<LocationData> _onLocationChanged;
+  Stream<bool> _onGpsButtonStateChanged;
 
   Future<bool> changeSettings(
           {LocationAccuracy accuracy = LocationAccuracy.HIGH,
@@ -107,6 +110,16 @@ class Location {
           (element) => LocationData.fromMap(element.cast<String, double>()));
     }
     return _onLocationChanged;
+  }
+
+  Stream<bool> onGpsButtonStateChanged() {
+    if(_onGpsButtonStateChanged == null) {
+      _onGpsButtonStateChanged = _gpsButtonStream.receiveBroadcastStream().map<bool>(
+        (element) => element
+      );
+      return _onGpsButtonStateChanged;
+    }
+    return _onGpsButtonStateChanged;
   }
 
   Future<bool> registerBackgroundLocation(void Function(List<LocationData> id) callback) {    

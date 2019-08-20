@@ -5,6 +5,8 @@ import android.app.Activity;
 import android.provider.Settings;
 import android.content.IntentSender;
 import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.BroadcastReceiver;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.location.LocationManager;
@@ -64,6 +66,8 @@ import io.flutter.view.FlutterRunArguments;
  */
 public class LocationPlugin implements MethodCallHandler, StreamHandler, PluginRegistry.ActivityResultListener {
     private static final String STREAM_CHANNEL_NAME = "lyokone/locationstream";
+    private static final String GPS_BUTTON_STREAM_CHANNEL_NAME = "lyokone/gpsbuttonstream";
+
     private static final String METHOD_CHANNEL_NAME = "lyokone/location";
 
     private static final int REQUEST_PERMISSIONS_REQUEST_CODE = 34;
@@ -103,6 +107,7 @@ public class LocationPlugin implements MethodCallHandler, StreamHandler, PluginR
     private static PluginRegistry.PluginRegistrantCallback mPluginRegistrantCallback;
 
     private EventSink events;
+    private EventSink gpsButtonEvents;
     private Result result;
 
     private int locationPermissionState;
@@ -125,6 +130,10 @@ public class LocationPlugin implements MethodCallHandler, StreamHandler, PluginR
         mSettingsClient = LocationServices.getSettingsClient(activity);
         locationManager = (LocationManager) activity.getSystemService(Context.LOCATION_SERVICE);
 
+        IntentFilter gpsButtonFilter = new IntentFilter(LocationManager.PROVIDERS_CHANGED_ACTION);
+        gpsButtonFilter.addAction(Intent.ACTION_PROVIDER_CHANGED);
+        activity.registerReceiver(gpsButtonSwitchStateReceiver, gpsButtonFilter);
+
         this.mapFlutterAccuracy.put(0, LocationRequest.PRIORITY_NO_POWER);
         this.mapFlutterAccuracy.put(1, LocationRequest.PRIORITY_LOW_POWER);
         this.mapFlutterAccuracy.put(2, LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY);
@@ -136,6 +145,31 @@ public class LocationPlugin implements MethodCallHandler, StreamHandler, PluginR
         createPermissionsResultListener();
         buildLocationSettingsRequest();
     }
+
+    private BroadcastReceiver gpsButtonSwitchStateReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+
+            if (LocationManager.PROVIDERS_CHANGED_ACTION.equals(intent.getAction())) {
+
+                LocationManager locationManager = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
+                boolean isGpsEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
+                boolean isNetworkEnabled = locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
+
+                if (isGpsEnabled || isNetworkEnabled) {
+                    // Handle Location turned ON
+                    if(gpsButtonEvents!=null) {
+                            gpsButtonEvents.success(true);
+                        }
+                } else {
+                    // Handle Location turned OFF
+                    if(gpsButtonEvents!=null) {
+                            gpsButtonEvents.success(false);
+                        }
+                }
+            }
+        }
+    };
 
     /**
      * Plugin registration.
@@ -153,6 +187,19 @@ public class LocationPlugin implements MethodCallHandler, StreamHandler, PluginR
             eventChannel.setStreamHandler(locationWithEventChannel);
             registrar.addRequestPermissionsResultListener(locationWithEventChannel.getPermissionsResultListener());
             
+            StreamHandler gpsButtonStreamHandler = new StreamHandler() {
+                @Override
+                public void onListen(Object o, EventChannel.EventSink eventSink) {
+                    gpsButtonEvents = eventSink;
+                }
+
+                @Override
+                public void onCancel(Object o) {
+                    gpsButtonEvents = null;
+                }
+            };
+            final EventChannel gpsButtonEventChannel  = new EventChannel(registrar.messenger(), GPS_BUTTON_STREAM_CHANNEL_NAME);
+            toggleEventChannel.setStreamHandler(gpsButtonEventChannel);
         } 
     }
 
