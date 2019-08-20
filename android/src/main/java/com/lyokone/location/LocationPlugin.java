@@ -107,7 +107,8 @@ public class LocationPlugin implements MethodCallHandler, StreamHandler, PluginR
     private static PluginRegistry.PluginRegistrantCallback mPluginRegistrantCallback;
 
     private EventSink events;
-    private EventSink gpsButtonEvents;
+    private static EventSink gpsButtonEvents;
+    private static boolean gpsButtonEventsState = true;
     private Result result;
 
     private int locationPermissionState;
@@ -159,12 +160,14 @@ public class LocationPlugin implements MethodCallHandler, StreamHandler, PluginR
                 if (isGpsEnabled || isNetworkEnabled) {
                     // Handle Location turned ON
                     if(gpsButtonEvents!=null) {
-                            gpsButtonEvents.success(true);
+                            gpsButtonEventsState = true;
+                            gpsButtonEvents.success(gpsButtonEventsState);
                         }
                 } else {
                     // Handle Location turned OFF
                     if(gpsButtonEvents!=null) {
-                            gpsButtonEvents.success(false);
+                            gpsButtonEventsState = false;
+                            gpsButtonEvents.success(gpsButtonEventsState);
                         }
                 }
             }
@@ -191,6 +194,7 @@ public class LocationPlugin implements MethodCallHandler, StreamHandler, PluginR
                 @Override
                 public void onListen(Object o, EventChannel.EventSink eventSink) {
                     gpsButtonEvents = eventSink;
+                    gpsButtonEvents.success(gpsButtonEventsState);
                 }
 
                 @Override
@@ -199,7 +203,7 @@ public class LocationPlugin implements MethodCallHandler, StreamHandler, PluginR
                 }
             };
             final EventChannel gpsButtonEventChannel  = new EventChannel(registrar.messenger(), GPS_BUTTON_STREAM_CHANNEL_NAME);
-            toggleEventChannel.setStreamHandler(gpsButtonEventChannel);
+            gpsButtonEventChannel.setStreamHandler(gpsButtonStreamHandler);
         } 
     }
 
@@ -280,19 +284,27 @@ public class LocationPlugin implements MethodCallHandler, StreamHandler, PluginR
                     if (waitingForPermission) {
                         waitingForPermission = false;
                         if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                            gpsButtonEventsState = true;
+                            gpsButtonEvents.success(gpsButtonEventsState);
                             result.success(1);
                         } else {
+                            gpsButtonEventsState = false;
+                            gpsButtonEvents.success(gpsButtonEventsState);
                             result.success(0);
                         }
                         result = null;
                     }
                     if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                        gpsButtonEventsState = true;
+                        gpsButtonEvents.success(gpsButtonEventsState);
                         if (result != null) {
                             startRequestingLocation();
                         } else if (events != null) {
                             startRequestingLocation();
                         }
                     } else {
+                        gpsButtonEventsState = false;
+                        gpsButtonEvents.success(gpsButtonEventsState);
                         if (!shouldShowRequestPermissionRationale()) {
                             if (result != null) {
                                 result.error("PERMISSION_DENIED_NEVER_ASK", "Location permission denied forever- please open app settings", null);
