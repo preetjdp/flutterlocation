@@ -69,6 +69,7 @@ class Location {
 
   Stream<LocationData> _onLocationChanged;
   Stream<bool> _onGpsButtonStateChanged;
+  
 
   Future<bool> changeSettings(
           {LocationAccuracy accuracy = LocationAccuracy.HIGH,
@@ -115,7 +116,9 @@ class Location {
   Stream<bool> onGpsButtonStateChanged() {
     if(_onGpsButtonStateChanged == null) {
       _onGpsButtonStateChanged = _gpsButtonStream.receiveBroadcastStream().map<bool>(
-        (element) => element
+        (element) {
+          return element == null ? true : element;
+        } 
       );
       return _onGpsButtonStateChanged;
     }
