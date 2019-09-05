@@ -54,7 +54,6 @@ void callbackDispatcher() {
   });
 }
 
-
 /// https://developers.google.com/android/reference/com/google/android/gms/location/LocationRequest
 /// https://developer.apple.com/documentation/corelocation/cllocationaccuracy?language=objc
 /// Precision of the Location
@@ -64,12 +63,11 @@ class Location {
   static const MethodChannel _channel = const MethodChannel('lyokone/location');
   static const EventChannel _stream =
       const EventChannel('lyokone/locationstream');
-  static const EventChannel _gpsButtonStream = 
+  static const EventChannel _gpsButtonStream =
       const EventChannel('lyokone/gpsbuttonstream');
 
   Stream<LocationData> _onLocationChanged;
-  Stream<bool> _onGpsButtonStateChanged;
-  
+  StreamController<bool> _onGpsButtonStateChangedController;
 
   Future<bool> changeSettings(
           {LocationAccuracy accuracy = LocationAccuracy.HIGH,
@@ -114,28 +112,31 @@ class Location {
   }
 
   Stream<bool> onGpsButtonStateChanged() {
-    if(_onGpsButtonStateChanged == null) {
-      _onGpsButtonStateChanged = _gpsButtonStream.receiveBroadcastStream().map<bool>(
-        (element) {
-          return element == null ? true : element;
-        } 
-      );
-      return _onGpsButtonStateChanged;
+    if (_onGpsButtonStateChangedController.stream == null) {
+      _onGpsButtonStateChangedController.add(true);
+      _onGpsButtonStateChangedController.addStream(
+          _gpsButtonStream.receiveBroadcastStream().map<bool>((element) {
+        return element == null ? true : element;
+      }));
+      return _onGpsButtonStateChangedController.stream;
     }
-    return _onGpsButtonStateChanged;
+    return _onGpsButtonStateChangedController.stream;
   }
 
-  Future<bool> registerBackgroundLocation(void Function(List<LocationData> id) callback) {    
-    int rawHandle = PluginUtilities.getCallbackHandle(callbackDispatcher).toRawHandle();
+  Future<bool> registerBackgroundLocation(
+      void Function(List<LocationData> id) callback) {
+    int rawHandle =
+        PluginUtilities.getCallbackHandle(callbackDispatcher).toRawHandle();
     int rawCallback = PluginUtilities.getCallbackHandle(callback).toRawHandle();
     return _channel.invokeMethod('registerBackgroundLocation', {
-        "rawHandle": rawHandle,
-        "rawCallback": rawCallback
-      }).then((result) => result == 1);
+      "rawHandle": rawHandle,
+      "rawCallback": rawCallback
+    }).then((result) => result == 1);
   }
 
-  Future<bool> removeBackgroundLocation() {    
-    return _channel.invokeMethod('removeBackgroundLocation').then((result) => result == 1);
+  Future<bool> removeBackgroundLocation() {
+    return _channel
+        .invokeMethod('removeBackgroundLocation')
+        .then((result) => result == 1);
   }
-
 }
