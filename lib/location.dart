@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:ui';
+// import 'package:rxdart/rxdart.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -67,7 +68,8 @@ class Location {
       const EventChannel('lyokone/gpsbuttonstream');
 
   Stream<LocationData> _onLocationChanged;
-  StreamController<bool> _onGpsButtonStateChangedController;
+  Stream<bool> _onGpsButtonStateChanged;
+  // StreamController<bool> _onGpsButtonStateChangedController;
 
   Future<bool> changeSettings(
           {LocationAccuracy accuracy = LocationAccuracy.HIGH,
@@ -112,16 +114,30 @@ class Location {
   }
 
   Stream<bool> onGpsButtonStateChanged() {
-    if (_onGpsButtonStateChangedController.stream == null) {
-      _onGpsButtonStateChangedController.add(true);
-      _onGpsButtonStateChangedController.addStream(
-          _gpsButtonStream.receiveBroadcastStream().map<bool>((element) {
-        return element == null ? true : element;
-      }));
-      return _onGpsButtonStateChangedController.stream;
+    if (_onGpsButtonStateChanged == null) {
+      _onGpsButtonStateChanged = _gpsButtonStream
+          .receiveBroadcastStream()
+          .map<bool>((element) => element);
+      return _onGpsButtonStateChanged;
     }
-    return _onGpsButtonStateChangedController.stream;
+    return _onGpsButtonStateChanged;
   }
+
+  // void onGpsButtonStateChanged() {
+  //   // if (_onGpsButtonStateChangedController.stream == null) {
+  //     // _onGpsButtonStateChangedController.add(true);
+  //     // _onGpsButtonStateChangedController.addStream(
+  //     //     _gpsButtonStream.receiveBroadcastStream().map<bool>((element) {
+  //     //   return element == null ? true : element;
+  //     // }));
+  //     _gpsButtonStream.receiveBroadcastStream().map((element) {
+  //       print(element);
+  //       return element;
+  //       });
+  //     // return _gpsButtonStream.receiveBroadcastStream();
+  //   // }
+  //   // return _onGpsButtonStateChangedController.stream;
+  // }
 
   Future<bool> registerBackgroundLocation(
       void Function(List<LocationData> id) callback) {

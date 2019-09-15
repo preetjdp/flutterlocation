@@ -19,30 +19,32 @@ class _MyAppState extends State<MyApp> {
 
   Location _locationService = new Location();
 
-
-
   @override
   void initState() {
     super.initState();
-    _locationService.onGpsButtonStateChanged().listen((e) {
-      _isGpsEnabled = e;
-      print("New thing from JAVA :" + e.toString());
-      setState((){});
-    });
+    // _locationService.onGpsButtonStateChanged().listen((e) {
+    //   _isGpsEnabled = e;
+    //   print("New thing from JAVA :" + e.toString());
+    //   setState((){});
+    // });
   }
-
 
   @override
   Widget build(BuildContext context) {
     return new MaterialApp(
-        home: new Scaffold(
-            appBar: new AppBar(
-              title: new Text('Location plugin example app'),
-            ),
-            body: Center(
-              child: Container(
-                child: Text("the current status of the gpos button is  " + _isGpsEnabled.toString() )
-              ),
-            )));
+        home: StreamBuilder<Object>(
+            stream: _locationService.onGpsButtonStateChanged(),
+            builder: (context, snapshot) {
+              return new Scaffold(
+                  appBar: new AppBar(
+                    title: new Text('Location plugin example app'),
+                  ),
+                  body: Center(
+                    child: Container(
+                        child: Text(
+                            "the current status of the gpos button is  " +
+                                snapshot.data.toString())),
+                  ));
+            }));
   }
 }
